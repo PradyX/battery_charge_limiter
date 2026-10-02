@@ -15,13 +15,33 @@ import io.github.muntashirakon.bcl.Utils
  */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (Intent.ACTION_BOOT_COMPLETED == intent.action) {
-            Utils.setVoltageThreshold(null, true, context, null)
-            Utils.startServiceIfLimitEnabled(context)
-            Shell.cmd("cat ${Utils.getVoltageFile()}").submit {
-                if (it.out.size != 0) {
-                    Utils.getSettings(context).edit().putString(Constants.DEFAULT_VOLTAGE_LIMIT, it.out[0]).apply()
+        if (Intent.ACTION_BOOT_COMPLETED != intent.action) {
+            return
+        }
+
+        val appContext = context.applicationContext
+        // Immediately after BOOT_COMPLETED the su daemon is usually not accepting
+        // commands yet. Issuing them right away fails silently, which left the limit
+        // unenforced whenever the device powered on with the charger already
+        // plugged in (no ACTION_POWER_CONNECTED is broadcast in that case, so
+        // PowerConnectionReceiver cannot recover it either). Wait for a root shell
+        // first, then apply the limit.
+        val pendingResult = goAsync()
+        Shell.getShell { shell ->
+            try {
+                if (!shell.isRoot) {
+                    return@getShell
                 }
+                Utils.setVoltageThreshold(null, true, appContext, null)
+                Utils.startServiceIfLimitEnabled(appContext)
+                Shell.cmd("cat ${Utils.getVoltageFile()}").submit {
+                    if (it.out.isNotEmpty()) {
+                        Utils.getSettings(appContext).edit()
+                            .putString(Constants.DEFAULT_VOLTAGE_LIMIT, it.out[0]).apply()
+                    }
+                }
+            } finally {
+                pendingResult.finish()
             }
         }
     }

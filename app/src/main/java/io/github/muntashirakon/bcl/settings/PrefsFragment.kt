@@ -2,6 +2,8 @@ package io.github.muntashirakon.bcl.settings
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.fragment.app.DialogFragment
 import androidx.preference.ListPreference
 import androidx.preference.Preference
@@ -51,7 +53,14 @@ class PrefsFragment : PreferenceFragmentCompat() {
 
         theme.setOnPreferenceChangeListener { preference, _ ->
             if (preference is ListPreference) {
-                requireActivity().recreate()
+                // The new value is only persisted after this listener returns, so
+                // recreating straight away re-read the old theme. Defer the
+                // recreation until the preference has been written.
+                Handler(Looper.getMainLooper()).post {
+                    if (!requireActivity().isFinishing) {
+                        requireActivity().recreate()
+                    }
+                }
             }
             true
         }
