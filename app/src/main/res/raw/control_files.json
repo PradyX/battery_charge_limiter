@@ -184,7 +184,8 @@
     "label": "batt_slate_mode",
     "details": "Samsung",
     "chargeOn": "0",
-    "chargeOff": "1"
+    "chargeOff": "1",
+    "issues": true
   },
   {
     "file": "/sys/class/power_supply/battery/charge_enabled",
@@ -228,6 +229,13 @@
     "file": "/sys/class/power_supply/battery/input_suspend",
     "label": "input_suspend",
     "details": "Xiaomi Mi 6 [sagit]",
+    "chargeOn": "0",
+    "chargeOff": "1"
+  },
+  {
+    "file": "/sys/class/power_supply/battery/input_suspend",
+    "label": "input_suspend",
+    "details": "Samsung Galaxy A7 Lite / A6 / A7 (Exynos, MediaTek)",
     "chargeOn": "0",
     "chargeOff": "1"
   },
