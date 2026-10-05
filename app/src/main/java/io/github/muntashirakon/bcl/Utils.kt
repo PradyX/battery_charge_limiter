@@ -10,9 +10,11 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.os.BatteryManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.UserManager
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -112,7 +114,7 @@ object Utils {
      *
      * Failures and ignored writes are logged instead of being swallowed.
      */
-    private fun writeCtrlFile(file: String, newState: String) {
+    internal fun writeCtrlFile(file: String, newState: String) {
         val write = "echo \"$newState\" > $file && cat $file"
         val command = if (cfInitialized) {
             write
@@ -275,9 +277,13 @@ object Utils {
     }
 
     fun startServiceIfLimitEnabled(context: Context) {
+        syncDirectBootSettings(context)
         if (!getSettings(context).getBoolean(CHARGE_LIMIT_ENABLED, false)) {
             return
         }
+        // An explicit start request re-arms the limit after a temporary dismissal.
+        getPrefs(context).edit().putBoolean(PrefsFragment.KEY_SERVICE_DISMISSED, false).apply()
+        ensureServiceWatchdog(context)
         if (getPrefs(context).getBoolean(PrefsFragment.KEY_DISABLE_AUTO_RECHARGE, false)) {
             changeState(context, CHARGE_ON)
         }
@@ -299,6 +305,11 @@ object Utils {
     }
 
     fun stopService(context: Context, ignoreAutoReset: Boolean = true) {
+        // Keep the device-protected mirror in sync while the settings are readable.
+        syncDirectBootSettings(context)
+        if (!getSettings(context).getBoolean(CHARGE_LIMIT_ENABLED, false)) {
+            cancelServiceWatchdog(context)
+        }
         val wasServiceRunning = ForegroundService.isRunning
         if (ignoreAutoReset) {
             ForegroundService.ignoreAutoReset()
@@ -311,6 +322,74 @@ object Utils {
         if (wasServiceRunning && !getPrefs(context).getBoolean("hide_toast_on_service_changes", false)) {
             Toast.makeText(context, R.string.service_disabled, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /**
+     * Persisted periodic watchdog that recovers the service after the process is
+     * killed in the background. The one-shot plug-in job cannot cover this: it is
+     * consumed when charging starts, so a kill afterwards would leave the limit
+     * unenforced until the next plug-in. The watchdog runs about every 15 minutes,
+     * restarts the service when it should be running and clears the temporary
+     * "dismissed" state once the charger is gone.
+     */
+    fun ensureServiceWatchdog(context: Context) {
+        val jobScheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
+            && jobScheduler.getPendingJob(Constants.JOB_SERVICE_WATCHDOG_ID) != null
+        ) {
+            return
+        }
+        val jobInfo = JobInfo.Builder(
+            Constants.JOB_SERVICE_WATCHDOG_ID,
+            ComponentName(context, ChargeStartJobService::class.java)
+        )
+            .setPeriodic(15 * 60 * 1000L)
+            .setPersisted(true)
+            .build()
+        jobScheduler.schedule(jobInfo)
+    }
+
+    private fun cancelServiceWatchdog(context: Context) {
+        val jobScheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+        jobScheduler.cancel(Constants.JOB_SERVICE_WATCHDOG_ID)
+    }
+
+    /**
+     * Returns the device-protected preferences used during direct boot, i.e.
+     * before the user unlocks the device and the regular settings are readable.
+     */
+    fun getDirectBootPrefs(context: Context): SharedPreferences {
+        return context.createDeviceProtectedStorageContext()
+            .getSharedPreferences(Constants.DIRECT_BOOT_PREFS, Context.MODE_PRIVATE)
+    }
+
+    fun isUserUnlocked(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
+            return true
+        }
+        val userManager = context.getSystemService(Context.USER_SERVICE) as UserManager
+        return userManager.isUserUnlocked
+    }
+
+    /**
+     * Mirrors the enforcement settings into device-protected storage so the
+     * pre-unlock service can apply the limit after a reboot, before the user
+     * unlocks the device and the credential-encrypted settings are readable.
+     */
+    fun syncDirectBootSettings(context: Context) {
+        if (!isUserUnlocked(context)) {
+            return
+        }
+        val settings = getSettings(context)
+        val limit = settings.getInt(LIMIT, Constants.DEFAULT_LIMIT_PC)
+        getDirectBootPrefs(context).edit()
+            .putBoolean(CHARGE_LIMIT_ENABLED, settings.getBoolean(CHARGE_LIMIT_ENABLED, false))
+            .putString(FILE_KEY, getCtrlFileData(context))
+            .putString(CHARGE_ON_KEY, getCtrlEnabledData(context))
+            .putString(CHARGE_OFF_KEY, getCtrlDisabledData(context))
+            .putInt(LIMIT, limit)
+            .putInt(MIN, settings.getInt(MIN, limit - 2))
+            .apply()
     }
 
     /**

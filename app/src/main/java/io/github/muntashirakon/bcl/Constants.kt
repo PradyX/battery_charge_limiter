@@ -55,6 +55,10 @@ object Constants {
     const val FOREGROUND_SERVICE_NOTIFICATION_CHANNEL_ID = BuildConfig.APPLICATION_ID + ".action.FOREGROUND_SERVICE"
 
     const val JOB_CHARGE_START_ID = 1
+    const val JOB_SERVICE_WATCHDOG_ID = 2
+
+    /** Device-protected storage: readable before the user unlocks the device. */
+    const val DIRECT_BOOT_PREFS = "DirectBoot"
 
     const val SAVED_PATH_DATA = "saved_ctrl_path_data"
     const val SAVED_ENABLED_DATA = "saved_ctrl_enabled_data"

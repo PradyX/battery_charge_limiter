@@ -125,6 +125,7 @@ class MainFragment: Fragment() {
         limitByVoltageSwitch?.setOnCheckedChangeListener(switchListener)
         maxPicker?.setOnValueChangedListener { _, _, max ->
             Utils.setLimit(max, settings!!)
+            Utils.syncDirectBootSettings(requireContext())
             maxText?.text = getString(R.string.limit, max)
             val min = settings?.getInt(Constants.MIN, max - 2)
             minPicker?.maxValue = max
@@ -139,6 +140,7 @@ class MainFragment: Fragment() {
 
         minPicker?.setOnValueChangedListener { _, _, min ->
             settings?.edit()?.putInt(Constants.MIN, min)?.apply()
+            Utils.syncDirectBootSettings(requireContext())
             updateMinText(min)
         }
         resetBatteryStatsButton.setOnClickListener { Utils.resetBatteryStats(requireContext()) }

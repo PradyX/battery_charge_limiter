@@ -62,6 +62,10 @@ class ForegroundService : Service() {
         isRunning = true
 
         settings.edit().putBoolean(NOTIFICATION_LIVE, true).apply()
+        // Refresh the pre-unlock mirror and make sure the kill-recovery watchdog
+        // is scheduled whenever the service is alive.
+        Utils.syncDirectBootSettings(this)
+        Utils.ensureServiceWatchdog(this)
 
         val channel = NotificationChannelCompat.Builder(
             Constants.FOREGROUND_SERVICE_NOTIFICATION_CHANNEL_ID,
@@ -102,7 +106,10 @@ class ForegroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         ignoreAutoReset = false
-        return super.onStartCommand(intent, flags, startId)
+        // START_STICKY: if the process is killed in the background (low memory,
+        // aggressive ROM management), the system recreates the service, onCreate
+        // registers the receivers again and BatteryReceiver re-applies the limit.
+        return START_STICKY
     }
 
     fun setNotificationActionText(actionText: String) {

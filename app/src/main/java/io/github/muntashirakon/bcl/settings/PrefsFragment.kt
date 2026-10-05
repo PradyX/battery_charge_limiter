@@ -116,6 +116,7 @@ class PrefsFragment : PreferenceFragmentCompat() {
         const val KEY_ENFORCE_CHARGE_LIMIT = "enforce_charge_limit"
         const val KEY_ALWAYS_WRITE_CF = "always_write_cf"
         const val KEY_DISABLE_AUTO_RECHARGE = "disable_auto_recharge"
+        const val KEY_SERVICE_DISMISSED = "service_dismissed"
         const val KEY_THEME = "theme"
     }
 }
