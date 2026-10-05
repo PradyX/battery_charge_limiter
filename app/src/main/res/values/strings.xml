@@ -31,12 +31,34 @@
     <string name="heat_protection">Heat protection</string>
     <string name="heat_protection_desc">Pause charging while the battery is hotter than the maximum temperature</string>
     <string name="heat_protection_max_temp">Max battery temperature (&#176;C)</string>
-    <string name="battery_health_health">Health: %1$s</string>
-    <string name="battery_health_cycles">Cycles: %1$d</string>
-    <string name="battery_health_full">Full capacity: %1$d mAh</string>
-    <string name="battery_health_design">Design: %1$d mAh</string>
-    <string name="battery_health_capacity">%1$d%% of design</string>
-    <string name="battery_health_unavailable">Battery health data unavailable</string>
+    <string name="percent">%1$d%%</string>
+    <string name="battery_voltage_value" translatable="false">%1$.3f V</string>
+    <string name="temperature_celsius" translatable="false">%1$.1f ℃</string>
+    <string name="temperature_fahrenheit" translatable="false">%1$.1f ℉</string>
+
+    <string name="section_charge_limit">Charge limit</string>
+    <string name="section_discharge">Discharge</string>
+    <string name="section_behaviour">Behaviour</string>
+    <string name="section_advanced">Advanced</string>
+    <string name="label_limit">Limit</string>
+    <string name="label_recharge">Recharge at</string>
+    <string name="label_target">Target</string>
+
+    <string name="monitor_capacity">Maximum capacity</string>
+    <string name="monitor_capacity_value">%1$d mAh (%2$d%%)</string>
+    <string name="monitor_capacity_mah">%1$d mAh</string>
+    <string name="monitor_cycles">Cycle count</string>
+    <string name="monitor_temperature">Battery temperature</string>
+    <string name="monitor_time_to_full">Time to full</string>
+    <string name="monitor_time_minutes">%1$d min</string>
+    <string name="monitor_time_hours_minutes">%1$d h %2$d min</string>
+    <string name="monitor_charger">Charger</string>
+    <string name="monitor_charger_value">%1$.2f V · %2$.2f A max</string>
+    <string name="monitor_charger_volts">%1$.2f V</string>
+    <string name="monitor_power_charging">Charging at %1$.1f W</string>
+    <string name="monitor_power_load">Load %1$.1f W</string>
+    <string name="monitor_health">Health: %1$s</string>
+    <string name="monitor_unknown" translatable="false">—</string>
 
     <string name="battery_optimization_title">Battery optimization is on</string>
     <string name="battery_optimization_message">Android can stop the charge limit from being enforced by killing the app in the background. Disable battery optimization for the app to keep the limit working even when the app is not open.</string>

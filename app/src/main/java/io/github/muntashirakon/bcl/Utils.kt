@@ -252,60 +252,6 @@ object Utils {
         )
     }
 
-    /**
-     * Reads the battery health values from the kernel and delivers a one-line
-     * summary on the main thread. The values change slowly, so this is meant to
-     * be called when the screen appears rather than on every battery update.
-     */
-    fun getBatteryHealthAsync(context: Context, callback: (String) -> Unit) {
-        val dir = "/sys/class/power_supply/battery/"
-        Shell.cmd(
-            "cat ${dir}cycle_count",
-            "cat ${dir}charge_full",
-            "cat ${dir}charge_full_design",
-            "cat ${dir}health"
-        ).submit { result ->
-            val text = if (result.isSuccess) {
-                formatBatteryHealth(context, result.out)
-            } else {
-                context.getString(R.string.battery_health_unavailable)
-            }
-            Handler(Looper.getMainLooper()).post { callback(text) }
-        }
-    }
-
-    /**
-     * Formats the raw kernel values into a one-line summary. Missing values and
-     * implausible ones (some kernels report a bogus design capacity) are left out
-     * instead of being shown wrong.
-     */
-    fun formatBatteryHealth(context: Context, out: List<String>): String {
-        val cycles = out.getOrNull(0)?.trim()?.toIntOrNull()?.takeIf { it >= 0 }
-        val fullUah = out.getOrNull(1)?.trim()?.toLongOrNull()?.takeIf { it > 0 }
-        val designUah = out.getOrNull(2)?.trim()?.toLongOrNull()
-        val health = out.getOrNull(3)?.trim()
-            ?.takeIf { it.isNotEmpty() && !it.equals("unknown", ignoreCase = true) }
-        val parts = mutableListOf<String>()
-        health?.let { parts += context.getString(R.string.battery_health_health, it) }
-        cycles?.let { parts += context.getString(R.string.battery_health_cycles, it) }
-        fullUah?.let { parts += context.getString(R.string.battery_health_full, (it / 1000).toInt()) }
-        // A design capacity outside 1000-15000 mAh is not credible on a phone.
-        if (designUah != null && designUah in 1_000_000..15_000_000) {
-            parts += context.getString(R.string.battery_health_design, (designUah / 1000).toInt())
-            fullUah?.let {
-                val percent = (it * 100 / designUah).toInt()
-                if (percent in 30..130) {
-                    parts += context.getString(R.string.battery_health_capacity, percent)
-                }
-            }
-        }
-        return if (parts.isEmpty()) {
-            context.getString(R.string.battery_health_unavailable)
-        } else {
-            parts.joinToString(" · ")
-        }
-    }
-
     //    @SuppressLint("PrivateApi")
     fun resetBatteryStats(context: Context) {
 //        try {
