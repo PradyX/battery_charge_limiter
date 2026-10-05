@@ -4,17 +4,21 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.job.JobInfo
 import android.app.job.JobScheduler
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.os.UserManager
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -185,6 +189,46 @@ object Utils {
         return (batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
                 == BatteryManager.BATTERY_STATUS_CHARGING
                 || batteryIntent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) > 0)
+    }
+
+    /**
+     * Returns whether the system is allowed to skip battery optimizations (Doze,
+     * background restrictions) for the app.
+     *
+     * Without the exemption the system may kill the foreground service in the
+     * background, and the charge limit stops being applied until the app runs
+     * again. The check answers `true` on devices without battery optimization.
+     */
+    fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true
+        }
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    /**
+     * Opens the system dialog that asks the user to exempt the app from battery
+     * optimizations. Some ROMs do not implement the direct request, so the
+     * battery optimization settings screen is used as a fallback.
+     */
+    fun requestBatteryOptimizationExemption(context: Context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return
+        }
+        try {
+            context.startActivity(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    .setData(Uri.parse("package:${context.packageName}"))
+            )
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "Direct battery optimization request not available", e)
+            try {
+                context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            } catch (e2: ActivityNotFoundException) {
+                Log.w(TAG, "Battery optimization settings not available", e2)
+            }
+        }
     }
 
     fun getBatteryLevel(batteryIntent: Intent): Int {

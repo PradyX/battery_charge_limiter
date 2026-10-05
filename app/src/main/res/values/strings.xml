@@ -24,6 +24,12 @@
     <string name="open_app">Open App</string>
     <string name="file_data">(CTRL file data will appear here)</string>
 
+    <string name="battery_optimization_title">Battery optimization is on</string>
+    <string name="battery_optimization_message">Android can stop the charge limit from being enforced by killing the app in the background. Disable battery optimization for the app to keep the limit working even when the app is not open.</string>
+    <string name="battery_optimization_disable">Disable battery optimization</string>
+    <string name="battery_optimization_dont_ask">Don\'t ask again</string>
+    <string name="later">Later</string>
+
     <string name="previously_started">Previously Started</string>
     <string name="device_not_supported">Your device is not supported (yet)!</string>
     <string name="ok">OK</string>
