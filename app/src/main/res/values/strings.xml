@@ -24,6 +24,20 @@
     <string name="open_app">Open App</string>
     <string name="file_data">(CTRL file data will appear here)</string>
 
+    <string name="discharge_to">Discharge to</string>
+    <string name="discharging_to_x">Discharging to %1$d%%</string>
+    <string name="discharging_until_x">Discharging until %1$d%%</string>
+    <string name="cooling_down_at_x">Cooling down (%1$d&#176;C)</string>
+    <string name="heat_protection">Heat protection</string>
+    <string name="heat_protection_desc">Pause charging while the battery is hotter than the maximum temperature</string>
+    <string name="heat_protection_max_temp">Max battery temperature (&#176;C)</string>
+    <string name="battery_health_health">Health: %1$s</string>
+    <string name="battery_health_cycles">Cycles: %1$d</string>
+    <string name="battery_health_full">Full capacity: %1$d mAh</string>
+    <string name="battery_health_design">Design: %1$d mAh</string>
+    <string name="battery_health_capacity">%1$d%% of design</string>
+    <string name="battery_health_unavailable">Battery health data unavailable</string>
+
     <string name="battery_optimization_title">Battery optimization is on</string>
     <string name="battery_optimization_message">Android can stop the charge limit from being enforced by killing the app in the background. Disable battery optimization for the app to keep the limit working even when the app is not open.</string>
     <string name="battery_optimization_disable">Disable battery optimization</string>

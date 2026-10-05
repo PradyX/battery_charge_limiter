@@ -27,6 +27,10 @@ class MainFragment: Fragment() {
     private val settings by lazy(LazyThreadSafetyMode.NONE) { activity?.getSharedPreferences(Constants.SETTINGS, 0) }
     private val statusText by lazy(LazyThreadSafetyMode.NONE) { view?.findViewById<TextView>(R.id.status) }
     private val batteryInfo by lazy(LazyThreadSafetyMode.NONE) { view?.findViewById<TextView>(R.id.battery_info) }
+    private val batteryHealth by lazy(LazyThreadSafetyMode.NONE) { view?.findViewById<TextView>(R.id.battery_health) }
+    private val dischargeSwitch by lazy(LazyThreadSafetyMode.NONE) { view?.findViewById<SwitchMaterial>(R.id.discharge_switch) }
+    private val dischargePicker by lazy(LazyThreadSafetyMode.NONE) { view?.findViewById<NumberPicker>(R.id.discharge_picker) }
+    private val dischargeText by lazy(LazyThreadSafetyMode.NONE) { view?.findViewById<TextView>(R.id.discharge_text) }
     private val enableSwitch by lazy(LazyThreadSafetyMode.NONE) { view?.findViewById<SwitchMaterial>(R.id.enable_switch) }
     private val disableChargeSwitch by lazy(LazyThreadSafetyMode.NONE) { view?.findViewById<SwitchMaterial>(R.id.disable_charge_switch) }
     private val limitByVoltageSwitch by lazy(LazyThreadSafetyMode.NONE) { view?.findViewById<SwitchMaterial>(R.id.limit_by_voltage) }
@@ -37,6 +41,10 @@ class MainFragment: Fragment() {
     private lateinit var currentThreshold: String
     private val mHandler = MainHandler(this)
     private var prefs: SharedPreferences? = null
+    private var settingsChangeListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+
+    /** Guards the UI controls while [updateUi] changes them programmatically. */
+    private var suppressListeners = false
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
             Utils.startServiceIfLimitEnabled(requireContext())
@@ -143,6 +151,28 @@ class MainFragment: Fragment() {
             Utils.syncDirectBootSettings(requireContext())
             updateMinText(min)
         }
+
+        dischargePicker?.minValue = Constants.MIN_DISCHARGE_TARGET_PC
+        dischargePicker?.setOnValueChangedListener { _, _, target ->
+            if (suppressListeners) return@setOnValueChangedListener
+            settings?.edit()?.putInt(Constants.DISCHARGE_TARGET, target)?.apply()
+            updateDischargeText(target)
+        }
+        dischargeSwitch?.setOnCheckedChangeListener { _, isChecked ->
+            if (suppressListeners) return@setOnCheckedChangeListener
+            // The stored target can be stale (e.g. above a lowered limit) while the
+            // picker shows the clamped value, so store what the user actually sees.
+            dischargePicker?.let { picker ->
+                settings?.edit()?.putInt(Constants.DISCHARGE_TARGET, picker.value)?.apply()
+            }
+            settings?.edit()?.putBoolean(Constants.DISCHARGE_ACTIVE, isChecked)?.apply()
+            dischargePicker?.isEnabled = !isChecked
+        }
+        settingsChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            // The discharge session ends by itself when the target is reached.
+            if (key == Constants.DISCHARGE_ACTIVE) updateUi()
+        }
+        settings?.registerOnSharedPreferenceChangeListener(settingsChangeListener)
         resetBatteryStatsButton.setOnClickListener { Utils.resetBatteryStats(requireContext()) }
 //        autoResetSwitch.setOnCheckedChangeListener { _, isChecked ->
 //            settings.edit().putBoolean(AUTO_RESET_STATS, isChecked).apply() }
@@ -168,6 +198,7 @@ class MainFragment: Fragment() {
         context?.registerReceiver(charging, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         // the limits could have been changed by an Intent, so update the UI here
         updateUi()
+        Utils.getBatteryHealthAsync(requireContext()) { text -> batteryHealth?.text = text }
     }
 
     override fun onStop() {
@@ -177,6 +208,7 @@ class MainFragment: Fragment() {
 
     override fun onDestroy() {
         prefs?.unregisterOnSharedPreferenceChangeListener(preferenceChangeListener)
+        settings?.unregisterOnSharedPreferenceChangeListener(settingsChangeListener)
         super.onDestroy()
     }
 
@@ -306,15 +338,33 @@ class MainFragment: Fragment() {
     }
 
     private fun updateUi() {
-        enableSwitch?.isChecked = settings?.getBoolean(Constants.CHARGE_LIMIT_ENABLED, false) == true
-        disableChargeSwitch?.isChecked = settings?.getBoolean(Constants.DISABLE_CHARGE_NOW, false) == true
-        limitByVoltageSwitch?.isChecked = settings?.getBoolean(Constants.LIMIT_BY_VOLTAGE, false) == true
-        val max = settings?.getInt(Constants.LIMIT, 80) ?: 80
-        val min = settings?.getInt(Constants.MIN, max - 2) ?: (max - 2)
-        maxPicker?.value = max
-        maxText?.text = getString(R.string.limit, max)
-        minPicker?.maxValue = max
-        minPicker?.value = min
-        updateMinText(min)
+        suppressListeners = true
+        try {
+            enableSwitch?.isChecked = settings?.getBoolean(Constants.CHARGE_LIMIT_ENABLED, false) == true
+            disableChargeSwitch?.isChecked = settings?.getBoolean(Constants.DISABLE_CHARGE_NOW, false) == true
+            limitByVoltageSwitch?.isChecked = settings?.getBoolean(Constants.LIMIT_BY_VOLTAGE, false) == true
+            val max = settings?.getInt(Constants.LIMIT, 80) ?: 80
+            val min = settings?.getInt(Constants.MIN, max - 2) ?: (max - 2)
+            maxPicker?.value = max
+            maxText?.text = getString(R.string.limit, max)
+            minPicker?.maxValue = max
+            minPicker?.value = min
+            updateMinText(min)
+            val dischargeTarget = settings?.getInt(Constants.DISCHARGE_TARGET, Constants.MIN_DISCHARGE_TARGET_PC)
+                ?: Constants.MIN_DISCHARGE_TARGET_PC
+            val dischargeActive = settings?.getBoolean(Constants.DISCHARGE_ACTIVE, false) == true
+            dischargePicker?.maxValue = max.coerceAtLeast(Constants.MIN_DISCHARGE_TARGET_PC)
+            dischargePicker?.value = dischargeTarget
+                .coerceIn(Constants.MIN_DISCHARGE_TARGET_PC, max.coerceAtLeast(Constants.MIN_DISCHARGE_TARGET_PC))
+            dischargePicker?.isEnabled = !dischargeActive
+            dischargeSwitch?.isChecked = dischargeActive
+            updateDischargeText(dischargeTarget)
+        } finally {
+            suppressListeners = false
+        }
+    }
+
+    private fun updateDischargeText(target: Int?) {
+        dischargeText?.text = getString(R.string.discharging_until_x, target ?: Constants.MIN_DISCHARGE_TARGET_PC)
     }
 }

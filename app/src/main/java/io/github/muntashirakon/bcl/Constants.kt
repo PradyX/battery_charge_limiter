@@ -26,6 +26,16 @@ object Constants {
     const val AUTO_RESET_STATS = "auto_reset_stats"
     const val NOTIFICATION_SOUND = "notificationSound"
 
+    const val DISCHARGE_ACTIVE = "discharge_active"
+    const val DISCHARGE_TARGET = "discharge_target"
+    const val MIN_DISCHARGE_TARGET_PC: Int = 20
+
+    // Heat protection: resume charging this many degrees below the maximum.
+    const val HEAT_HYSTERESIS_C: Int = 2
+    const val DEFAULT_HEAT_MAX_TEMP_C: Int = 40
+    const val MIN_HEAT_MAX_TEMP_C: Int = 30
+    const val MAX_HEAT_MAX_TEMP_C: Int = 50
+
     const val LIMIT_BY_VOLTAGE = "limit_by_voltage"
     const val DEFAULT_VOLTAGE_LIMIT = "default_voltage_limit"
     const val CUSTOM_VOLTAGE_LIMIT = "custom_voltage_limit"

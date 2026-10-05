@@ -50,6 +50,15 @@
                 android:textColor="?attr/colorOnSurfaceVariant"
                 tools:text="(U: 4.214 V, T: 38 C)" />
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/battery_health"
+                android:layout_below="@+id/battery_info"
+                android:textSize="14sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                tools:text="Health: Good &#183; Cycles: 1 &#183; Full capacity: 2946 mAh" />
+
         </RelativeLayout>
 
         <com.google.android.material.card.MaterialCardView
@@ -176,6 +185,52 @@
                     android:layout_marginTop="6dp" />
 
             </RelativeLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="8dp"
+            app:contentPadding="16dp">
+
+            <androidx.appcompat.widget.LinearLayoutCompat
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/discharge_switch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/discharge_to"
+                    android:textAppearance="?attr/textAppearanceTitleSmall" />
+
+                <androidx.appcompat.widget.LinearLayoutCompat
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <NumberPicker
+                        android:id="@+id/discharge_picker"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="3dp"
+                        android:descendantFocusability="blocksDescendants" />
+
+                    <TextView
+                        android:id="@+id/discharge_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="6dp"
+                        android:textSize="16sp"
+                        android:textColor="?android:attr/textColorPrimary"
+                        tools:text="Discharging until 30%" />
+
+                </androidx.appcompat.widget.LinearLayoutCompat>
+
+            </androidx.appcompat.widget.LinearLayoutCompat>
+
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.textfield.TextInputLayout

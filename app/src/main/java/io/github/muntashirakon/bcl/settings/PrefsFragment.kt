@@ -118,6 +118,8 @@ class PrefsFragment : PreferenceFragmentCompat() {
         const val KEY_DISABLE_AUTO_RECHARGE = "disable_auto_recharge"
         const val KEY_SERVICE_DISMISSED = "service_dismissed"
         const val KEY_BATTERY_OPTIMIZATION_DONT_ASK = "battery_optimization_dont_ask"
+        const val KEY_HEAT_PROTECTION = "heat_protection"
+        const val KEY_HEAT_PROTECTION_MAX_TEMP = "heat_protection_max_temp"
         const val KEY_THEME = "theme"
     }
 }
