@@ -98,6 +98,7 @@ class BatteryReceiver(private val service: ForegroundService) : BroadcastReceive
             // continue only if the state didn't change in the meantime
             if (triggerState == lastState && !Utils.isPhonePluggedIn(service)) {
                 Utils.stopService(service, false)
+                Utils.scheduleChargeStartJob(service)
             }
         }, POWER_CHANGE_TOLERANCE_MS)
     }
@@ -168,6 +169,11 @@ class BatteryReceiver(private val service: ForegroundService) : BroadcastReceive
                 handler.postDelayed({ Utils.changeState(service, Utils.CHARGE_OFF) }, backOffTime)
             } else {
                 backOffTime = CHARGING_CHANGE_TOLERANCE_MS
+                // Re-assert the charge-off state on every battery update. If the
+                // write that reached the limit was lost, this repairs it instead
+                // of staying in "maintaining" while the device keeps charging.
+                // Utils.changeState() only writes when the file differs.
+                Utils.changeState(service, Utils.CHARGE_OFF)
             }
         } else if (batteryLevel < rechargePercentage) {
             if (switchState(CHARGE_REFRESH)) {

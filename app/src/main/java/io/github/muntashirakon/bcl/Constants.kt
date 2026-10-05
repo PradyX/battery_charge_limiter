@@ -54,6 +54,8 @@ object Constants {
     const val INTENT_CHANGE_LIMIT_ACTION = BuildConfig.APPLICATION_ID + ".action.CHANGE_LIMIT"
     const val FOREGROUND_SERVICE_NOTIFICATION_CHANNEL_ID = BuildConfig.APPLICATION_ID + ".action.FOREGROUND_SERVICE"
 
+    const val JOB_CHARGE_START_ID = 1
+
     const val SAVED_PATH_DATA = "saved_ctrl_path_data"
     const val SAVED_ENABLED_DATA = "saved_ctrl_enabled_data"
     const val SAVED_DISABLED_DATA = "saved_ctrl_disabled_data"

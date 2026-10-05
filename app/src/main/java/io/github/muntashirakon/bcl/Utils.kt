@@ -2,6 +2,9 @@ package io.github.muntashirakon.bcl
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.job.JobInfo
+import android.app.job.JobScheduler
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -85,25 +88,49 @@ object Utils {
             getCtrlDisabledData(context)
         }
 
-        val switchCommands: Array<String>
-        if (cfInitialized) {
-            switchCommands = arrayOf("echo \"$newState\" > $file")
-        } else {
-            cfInitialized = true
-            switchCommands = arrayOf(
-                "mount -o rw,remount $file", "chmod u+w $file",
-                "echo \"$newState\" > $file"
-            )
-        }
-
         if (alwaysWrite) {
-            Shell.cmd(switchCommands.joinToString(separator = " && ")).submit()
+            writeCtrlFile(file, newState)
         } else {
             Shell.cmd("cat $file").submit {
                 if (it.out.size == 0 || it.out[0] != newState) {
                     setChangePending()
-                    Shell.cmd(switchCommands.joinToString(separator = " && ")).submit()
+                    writeCtrlFile(file, newState)
                 }
+            }
+        }
+    }
+
+    /**
+     * Writes [newState] to the control [file] and verifies the result.
+     *
+     * The preparation commands must not be joined with `&&`: on many kernels
+     * (observed on a Samsung MediaTek device) `mount -o rw,remount <file>`
+     * fails because a sysfs path is not a mount point. With `&&` that failure
+     * skipped the `echo` as well, silently dropping the first write of every
+     * process - the app reported "maintaining" while the file kept its old
+     * value and the device kept charging past the limit.
+     *
+     * Failures and ignored writes are logged instead of being swallowed.
+     */
+    private fun writeCtrlFile(file: String, newState: String) {
+        val write = "echo \"$newState\" > $file && cat $file"
+        val command = if (cfInitialized) {
+            write
+        } else {
+            "mount -o rw,remount $file 2>/dev/null; chmod u+w $file 2>/dev/null; $write"
+        }
+        Shell.cmd(command).submit { result ->
+            val written = result.out.lastOrNull()?.trim()
+            when {
+                !result.isSuccess -> Log.e(
+                    TAG, "Failed to write '$newState' to $file: " +
+                        result.err.joinToString(separator = " ")
+                )
+                written != newState -> {
+                    cfInitialized = true
+                    Log.e(TAG, "Wrote '$newState' to $file but it reads back '$written'")
+                }
+                else -> cfInitialized = true
             }
         }
     }
@@ -284,6 +311,33 @@ object Utils {
         if (wasServiceRunning && !getPrefs(context).getBoolean("hide_toast_on_service_changes", false)) {
             Toast.makeText(context, R.string.service_disabled, Toast.LENGTH_SHORT).show()
         }
+    }
+
+    /**
+     * Schedules the persisted job that starts the service when charging begins.
+     *
+     * Manifest power broadcasts can be dropped for apps that are not running
+     * (observed on Android 13 GSIs), so a normal unplug/replug silently left
+     * the limit off. The system runs this job when the charging constraint is
+     * met, whether or not the app is alive. Called whenever the service stops
+     * and at boot; the job has a fixed id, so scheduling again just replaces it.
+     */
+    fun scheduleChargeStartJob(context: Context) {
+        if (!getSettings(context).getBoolean(CHARGE_LIMIT_ENABLED, false)) {
+            return
+        }
+        if (getPrefs(context).getBoolean(PrefsFragment.KEY_DISABLE_AUTO_RECHARGE, false)) {
+            return
+        }
+        val jobScheduler = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+        val jobInfo = JobInfo.Builder(
+            Constants.JOB_CHARGE_START_ID,
+            ComponentName(context, ChargeStartJobService::class.java)
+        )
+            .setRequiresCharging(true)
+            .setPersisted(true)
+            .build()
+        jobScheduler.schedule(jobInfo)
     }
 
     fun getCtrlFileData(context: Context): String {

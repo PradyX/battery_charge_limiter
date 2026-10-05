@@ -20,6 +20,9 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         val appContext = context.applicationContext
+        // Make sure a future plug-in restarts the limit even if the power
+        // broadcast is not delivered to the app (see Utils.scheduleChargeStartJob).
+        Utils.scheduleChargeStartJob(appContext)
         // Immediately after BOOT_COMPLETED the su daemon is usually not accepting
         // commands yet. Issuing them right away fails silently, which left the limit
         // unenforced whenever the device powered on with the charger already
